@@ -1,0 +1,85 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { Eye, Users } from "lucide-react"
+import { Button } from "@/ui/button"
+import { Badge } from "@/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/ui/table"
+import type { PacienteConConteo } from "@/lib/types"
+
+interface PacientesTableProps {
+  pacientes: PacienteConConteo[]
+  loading: boolean
+}
+
+export function PacientesTable({ pacientes, loading }: PacientesTableProps) {
+  const router = useRouter()
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    )
+  }
+
+  if (pacientes.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-center">
+        <Users className="h-10 w-10 text-muted-foreground/40" />
+        <p className="font-medium text-muted-foreground">No hay pacientes registrados</p>
+        <p className="text-sm text-muted-foreground">Crea el primer paciente con el botón de arriba</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Cédula</TableHead>
+            <TableHead>Edad</TableHead>
+            <TableHead>Historias</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pacientes.map((paciente) => (
+            <TableRow key={paciente.id} className="group">
+              <TableCell className="font-medium">{paciente.nombre}</TableCell>
+              <TableCell className="text-muted-foreground">{paciente.cedula}</TableCell>
+              <TableCell className="text-muted-foreground">{paciente.edad} años</TableCell>
+              <TableCell>
+                <Badge variant={paciente.historias_count > 0 ? "default" : "secondary"}>
+                  {paciente.historias_count}{" "}
+                  {paciente.historias_count === 1 ? "historia" : "historias"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/dashboard/pacientes/${paciente.id}`)}
+                >
+                  <Eye className="mr-1 h-3 w-3" />
+                  Ver Historias
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
