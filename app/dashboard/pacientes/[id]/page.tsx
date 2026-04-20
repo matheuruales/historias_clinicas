@@ -2,13 +2,15 @@
 
 import Link from "next/link"
 import { use } from "react"
-import { ArrowLeft, User } from "lucide-react"
+import { ArrowLeft, Pill, User } from "lucide-react"
 import { Button } from "@/ui/button"
 import { Card, CardContent } from "@/ui/card"
 import { Badge } from "@/ui/badge"
-import { usePatientHistorias } from "@/hooks/use-clinical-data"
+import { usePatientHistorias, usePatientPrescripciones, useMedicamentos } from "@/hooks/use-clinical-data"
 import { HistoriasTable } from "@/components/dashboard/historias-table"
 import { NuevaHistoriaDialog } from "@/components/dashboard/nueva-historia-dialog"
+import { PrescripcionesTable } from "@/components/dashboard/prescripciones-table"
+import { NuevaPrescripcionDialog } from "@/components/dashboard/nueva-prescripcion-dialog"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -17,6 +19,8 @@ interface PageProps {
 export default function PacienteDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const { paciente, historias, loading, error, addHistoria } = usePatientHistorias(id)
+  const { prescripciones, loading: loadingP, error: errorP, addPrescripcion } = usePatientPrescripciones(id)
+  const { medicamentos } = useMedicamentos()
 
   return (
     <div className="space-y-8">
@@ -28,8 +32,8 @@ export default function PacienteDetailPage({ params }: PageProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Historias Clínicas</h1>
-          <p className="text-muted-foreground">Registros médicos del paciente</p>
+          <h1 className="text-2xl font-bold tracking-tight">Expediente del Paciente</h1>
+          <p className="text-muted-foreground">Historias clínicas y medicamentos</p>
         </div>
       </div>
 
@@ -49,6 +53,10 @@ export default function PacienteDetailPage({ params }: PageProps) {
                 <Badge variant="secondary">
                   {historias.length} historia{historias.length !== 1 ? "s" : ""}
                 </Badge>
+                <Badge variant="secondary">
+                  <Pill className="mr-1 h-3 w-3" />
+                  {prescripciones.length} prescripción{prescripciones.length !== 1 ? "es" : ""}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -59,6 +67,7 @@ export default function PacienteDetailPage({ params }: PageProps) {
         </div>
       )}
 
+      {/* Historias clínicas */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -70,14 +79,38 @@ export default function PacienteDetailPage({ params }: PageProps) {
           </div>
           {paciente && <NuevaHistoriaDialog pacienteId={id} onCreated={addHistoria} />}
         </div>
-
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </div>
         )}
-
         <HistoriasTable historias={historias} loading={loading} />
+      </div>
+
+      {/* Prescripciones */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Prescripciones</h2>
+            <p className="text-sm text-muted-foreground">
+              {prescripciones.length} prescripción{prescripciones.length !== 1 ? "es" : ""} asignada
+              {prescripciones.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          {paciente && (
+            <NuevaPrescripcionDialog
+              pacienteId={id}
+              medicamentos={medicamentos}
+              onCreated={addPrescripcion}
+            />
+          )}
+        </div>
+        {errorP && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {errorP}
+          </div>
+        )}
+        <PrescripcionesTable prescripciones={prescripciones} loading={loadingP} />
       </div>
     </div>
   )

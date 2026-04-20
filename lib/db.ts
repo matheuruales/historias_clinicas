@@ -5,10 +5,17 @@ import type {
   PacienteConConteo,
   NuevoPacienteInput,
   NuevaHistoriaInput,
+  Medicamento,
+  Prescripcion,
+  PrescripcionConMedicamento,
+  NuevoMedicamentoInput,
+  NuevaPrescripcionInput,
 } from "./types"
 
 const LS_PACIENTES = "hc_pacientes"
 const LS_HISTORIAS = "hc_historias"
+const LS_MEDICAMENTOS = "hc_medicamentos"
+const LS_PRESCRIPCIONES = "hc_prescripciones"
 
 function lsGetPacientes(): Paciente[] {
   if (typeof window === "undefined") return []
@@ -28,6 +35,26 @@ function lsSavePacientes(data: Paciente[]) {
 
 function lsSaveHistorias(data: HistoriaClinica[]) {
   localStorage.setItem(LS_HISTORIAS, JSON.stringify(data))
+}
+
+function lsGetMedicamentos(): Medicamento[] {
+  if (typeof window === "undefined") return []
+  const raw = localStorage.getItem(LS_MEDICAMENTOS)
+  return raw ? (JSON.parse(raw) as Medicamento[]) : []
+}
+
+function lsSaveMedicamentos(data: Medicamento[]) {
+  localStorage.setItem(LS_MEDICAMENTOS, JSON.stringify(data))
+}
+
+function lsGetPrescripciones(): Prescripcion[] {
+  if (typeof window === "undefined") return []
+  const raw = localStorage.getItem(LS_PRESCRIPCIONES)
+  return raw ? (JSON.parse(raw) as Prescripcion[]) : []
+}
+
+function lsSavePrescripciones(data: Prescripcion[]) {
+  localStorage.setItem(LS_PRESCRIPCIONES, JSON.stringify(data))
 }
 
 export async function getPacientes(): Promise<PacienteConConteo[]> {
@@ -136,6 +163,106 @@ export async function createHistoria(input: NuevaHistoriaInput): Promise<Histori
     const existing = lsGetHistorias()
     lsSaveHistorias([newHistoria, ...existing])
     return newHistoria
+  }
+}
+
+export async function getMedicamentos(): Promise<Medicamento[]> {
+  try {
+    const { data, error } = await supabase
+      .from("medicamentos")
+      .select("*")
+      .order("nombre")
+    if (error) throw error
+    return (data ?? []) as Medicamento[]
+  } catch {
+    return lsGetMedicamentos()
+  }
+}
+
+export async function createMedicamento(input: NuevoMedicamentoInput): Promise<Medicamento> {
+  try {
+    const { data, error } = await supabase
+      .from("medicamentos")
+      .insert(input)
+      .select()
+      .single()
+    if (error) throw error
+    return data as Medicamento
+  } catch {
+    const nuevo: Medicamento = {
+      id: crypto.randomUUID(),
+      nombre: input.nombre,
+      descripcion: input.descripcion || null,
+      unidad: input.unidad,
+      created_at: new Date().toISOString(),
+    }
+    lsSaveMedicamentos([...lsGetMedicamentos(), nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    return nuevo
+  }
+}
+
+export async function getPrescripcionesByPaciente(
+  pacienteId: string,
+): Promise<PrescripcionConMedicamento[]> {
+  try {
+    const { data, error } = await supabase
+      .from("prescripciones")
+      .select("*, medicamento:medicamentos(*)")
+      .eq("paciente_id", pacienteId)
+      .order("fecha_inicio", { ascending: false })
+    if (error) throw error
+    return (data ?? []) as PrescripcionConMedicamento[]
+  } catch {
+    const prescripciones = lsGetPrescripciones().filter((p) => p.paciente_id === pacienteId)
+    const medicamentos = lsGetMedicamentos()
+    return prescripciones
+      .map((p) => ({
+        ...p,
+        medicamento: medicamentos.find((m) => m.id === p.medicamento_id) ?? {
+          id: p.medicamento_id,
+          nombre: "Desconocido",
+          descripcion: null,
+          unidad: "",
+          created_at: "",
+        },
+      }))
+      .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio))
+  }
+}
+
+export async function createPrescripcion(
+  input: NuevaPrescripcionInput,
+): Promise<PrescripcionConMedicamento> {
+  try {
+    const { data, error } = await supabase
+      .from("prescripciones")
+      .insert(input)
+      .select("*, medicamento:medicamentos(*)")
+      .single()
+    if (error) throw error
+    return data as PrescripcionConMedicamento
+  } catch {
+    const medicamentos = lsGetMedicamentos()
+    const medicamento = medicamentos.find((m) => m.id === input.medicamento_id) ?? {
+      id: input.medicamento_id,
+      nombre: "Desconocido",
+      descripcion: null,
+      unidad: "",
+      created_at: "",
+    }
+    const nueva: Prescripcion = {
+      id: crypto.randomUUID(),
+      paciente_id: input.paciente_id,
+      medicamento_id: input.medicamento_id,
+      dosis: input.dosis,
+      frecuencia: input.frecuencia,
+      fecha_inicio: input.fecha_inicio,
+      fecha_fin: input.fecha_fin || null,
+      notas: input.notas || null,
+      created_at: new Date().toISOString(),
+    }
+    lsSavePrescripciones([nueva, ...lsGetPrescripciones()])
+    return { ...nueva, medicamento }
   }
 }
 

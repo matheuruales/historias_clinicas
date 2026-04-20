@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Stethoscope, Users } from "lucide-react"
+import { LayoutDashboard, Pill, Stethoscope, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/dashboard", label: "Panel Principal", icon: LayoutDashboard },
-  { href: "/dashboard", label: "Pacientes", icon: Users },
+  { href: "/dashboard",              label: "Panel Principal", icon: LayoutDashboard, exact: true },
+  { href: "/dashboard",              label: "Pacientes",       icon: Users,           exact: true },
+  { href: "/dashboard/medicamentos", label: "Medicamentos",    icon: Pill,            exact: false },
 ]
 
 export function Sidebar() {
@@ -28,10 +29,9 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard" || pathname.startsWith("/dashboard/")
-              : pathname === item.href
+          const isActive = item.exact
+            ? pathname === item.href || (item.href === "/dashboard" && pathname.startsWith("/dashboard/pacientes"))
+            : pathname.startsWith(item.href)
           return (
             <Link
               key={item.label}

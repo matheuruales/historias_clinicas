@@ -33,3 +33,43 @@ export interface NuevaHistoriaInput {
   tratamiento: string
   fecha: string
 }
+
+export interface Medicamento {
+  id: string
+  nombre: string
+  descripcion: string | null
+  unidad: string
+  created_at: string
+}
+
+export interface Prescripcion {
+  id: string
+  paciente_id: string
+  medicamento_id: string
+  dosis: string
+  frecuencia: string
+  fecha_inicio: string
+  fecha_fin: string | null
+  notas: string | null
+  created_at: string
+}
+
+export interface PrescripcionConMedicamento extends Prescripcion {
+  medicamento: Medicamento
+}
+
+export interface NuevoMedicamentoInput {
+  nombre: string
+  descripcion: string
+  unidad: string
+}
+
+export interface NuevaPrescripcionInput {
+  paciente_id: string
+  medicamento_id: string
+  dosis: string
+  frecuencia: string
+  fecha_inicio: string
+  fecha_fin: string | null
+  notas: string | null
+}
