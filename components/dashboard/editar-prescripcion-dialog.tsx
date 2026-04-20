@@ -12,6 +12,7 @@ import {
 } from "@/ui/dialog"
 import { Input } from "@/ui/input"
 import { Textarea } from "@/ui/textarea"
+import { DatePicker } from "@/ui/date-picker"
 import { cn } from "@/lib/utils"
 import type { Medicamento, NuevaPrescripcionInput, PrescripcionConMedicamento } from "@/lib/types"
 
@@ -138,20 +139,19 @@ export function EditarPrescripcionDialog({ prescripcion, medicamentos, onUpdated
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-medium">Fecha inicio</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.fecha_inicio}
-                onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+                onChange={(value) => setForm({ ...form, fecha_inicio: value })}
                 disabled={submitting}
               />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Fecha fin</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.fecha_fin}
-                onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+                onChange={(value) => setForm({ ...form, fecha_fin: value })}
                 disabled={submitting}
+                clearable
               />
             </div>
           </div>

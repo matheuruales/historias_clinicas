@@ -12,6 +12,7 @@ import {
 } from "@/ui/dialog"
 import { Input } from "@/ui/input"
 import { Textarea } from "@/ui/textarea"
+import { DatePicker } from "@/ui/date-picker"
 import type { HistoriaClinica, NuevaHistoriaInput } from "@/lib/types"
 
 interface EditarHistoriaDialogProps {
@@ -90,10 +91,9 @@ export function EditarHistoriaDialog({ historia, onUpdated }: EditarHistoriaDial
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
             <label className="text-sm font-medium">Fecha</label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.fecha}
-              onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+              onChange={(value) => setForm({ ...form, fecha: value })}
               disabled={submitting}
             />
           </div>

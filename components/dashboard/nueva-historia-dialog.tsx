@@ -12,6 +12,7 @@ import {
 } from "@/ui/dialog"
 import { Input } from "@/ui/input"
 import { Textarea } from "@/ui/textarea"
+import { DatePicker } from "@/ui/date-picker"
 import {
   Select,
   SelectContent,
@@ -148,10 +149,9 @@ export function NuevaHistoriaDialog({
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
             <label className="text-sm font-medium">Fecha</label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.fecha}
-              onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+              onChange={(value) => setForm({ ...form, fecha: value })}
               disabled={submitting}
             />
           </div>
@@ -258,20 +258,19 @@ export function NuevaHistoriaDialog({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Fecha inicio</label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={item.fecha_inicio}
-                        onChange={(e) => updatePrescripcion(index, { fecha_inicio: e.target.value })}
+                        onChange={(value) => updatePrescripcion(index, { fecha_inicio: value })}
                         disabled={submitting}
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Fecha fin</label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={item.fecha_fin}
-                        onChange={(e) => updatePrescripcion(index, { fecha_fin: e.target.value })}
+                        onChange={(value) => updatePrescripcion(index, { fecha_fin: value })}
                         disabled={submitting}
+                        clearable
                       />
                     </div>
                   </div>
