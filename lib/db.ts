@@ -10,12 +10,14 @@ import type {
   PrescripcionConMedicamento,
   NuevoMedicamentoInput,
   NuevaPrescripcionInput,
+  ActivityLog,
 } from "./types"
 
 const LS_PACIENTES = "hc_pacientes"
 const LS_HISTORIAS = "hc_historias"
 const LS_MEDICAMENTOS = "hc_medicamentos"
 const LS_PRESCRIPCIONES = "hc_prescripciones"
+const LS_ACTIVITY = "hc_activity"
 
 function lsGetPacientes(): Paciente[] {
   if (typeof window === "undefined") return []
@@ -57,6 +59,36 @@ function lsSavePrescripciones(data: Prescripcion[]) {
   localStorage.setItem(LS_PRESCRIPCIONES, JSON.stringify(data))
 }
 
+function lsGetActivity(): ActivityLog[] {
+  if (typeof window === "undefined") return []
+  const raw = localStorage.getItem(LS_ACTIVITY)
+  return raw ? (JSON.parse(raw) as ActivityLog[]) : []
+}
+
+function lsSaveActivity(data: ActivityLog[]) {
+  localStorage.setItem(LS_ACTIVITY, JSON.stringify(data))
+}
+
+async function logActivity(entry: Omit<ActivityLog, "id" | "created_at">) {
+  try {
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .insert(entry)
+      .select()
+      .single()
+    if (error) throw error
+    return data as ActivityLog
+  } catch {
+    const localEntry: ActivityLog = {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      ...entry,
+    }
+    lsSaveActivity([localEntry, ...lsGetActivity()])
+    return localEntry
+  }
+}
+
 export async function getPacientes(): Promise<PacienteConConteo[]> {
   try {
     const { data, error } = await supabase
@@ -93,7 +125,15 @@ export async function createPaciente(input: NuevoPacienteInput): Promise<Pacient
       .single()
 
     if (error) throw error
-    return data as Paciente
+    const created = data as Paciente
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: created.id,
+      action: "create",
+      summary: `Paciente registrado: ${created.nombre}`,
+      meta: { cedula: created.cedula },
+    })
+    return created
   } catch {
     const newPaciente: Paciente = {
       id: crypto.randomUUID(),
@@ -104,6 +144,13 @@ export async function createPaciente(input: NuevoPacienteInput): Promise<Pacient
     }
     const existing = lsGetPacientes()
     lsSavePacientes([newPaciente, ...existing])
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: newPaciente.id,
+      action: "create",
+      summary: `Paciente registrado: ${newPaciente.nombre}`,
+      meta: { cedula: newPaciente.cedula },
+    })
     return newPaciente
   }
 }
@@ -149,7 +196,15 @@ export async function createHistoria(input: NuevaHistoriaInput): Promise<Histori
       .single()
 
     if (error) throw error
-    return data as HistoriaClinica
+    const created = data as HistoriaClinica
+    await logActivity({
+      entity_type: "historia",
+      entity_id: created.id,
+      action: "create",
+      summary: `Historia clinica registrada (${created.fecha})`,
+      meta: { paciente_id: created.paciente_id },
+    })
+    return created
   } catch {
     const newHistoria: HistoriaClinica = {
       id: crypto.randomUUID(),
@@ -162,7 +217,58 @@ export async function createHistoria(input: NuevaHistoriaInput): Promise<Histori
     }
     const existing = lsGetHistorias()
     lsSaveHistorias([newHistoria, ...existing])
+    await logActivity({
+      entity_type: "historia",
+      entity_id: newHistoria.id,
+      action: "create",
+      summary: `Historia clinica registrada (${newHistoria.fecha})`,
+      meta: { paciente_id: newHistoria.paciente_id },
+    })
     return newHistoria
+  }
+}
+
+export async function updateHistoria(
+  id: string,
+  input: NuevaHistoriaInput,
+): Promise<HistoriaClinica> {
+  try {
+    const { data, error } = await supabase
+      .from("historias_clinicas")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single()
+    if (error) throw error
+    const updated = data as HistoriaClinica
+    await logActivity({
+      entity_type: "historia",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Historia clinica actualizada (${updated.fecha})`,
+      meta: { paciente_id: updated.paciente_id },
+    })
+    return updated
+  } catch {
+    const existing = lsGetHistorias().find((h) => h.id === id)
+    const updated: HistoriaClinica = {
+      id,
+      paciente_id: input.paciente_id,
+      diagnostico: input.diagnostico,
+      sintomas: input.sintomas,
+      tratamiento: input.tratamiento,
+      fecha: input.fecha,
+      created_at: existing?.created_at ?? new Date().toISOString(),
+    }
+    lsSaveHistorias(lsGetHistorias().map((h) => (h.id === id ? updated : h)))
+    await logActivity({
+      entity_type: "historia",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Historia clinica actualizada (${updated.fecha})`,
+      meta: { paciente_id: updated.paciente_id },
+    })
+    return updated
   }
 }
 
@@ -187,7 +293,15 @@ export async function createMedicamento(input: NuevoMedicamentoInput): Promise<M
       .select()
       .single()
     if (error) throw error
-    return data as Medicamento
+    const created = data as Medicamento
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: created.id,
+      action: "create",
+      summary: `Medicamento registrado: ${created.nombre}`,
+      meta: { unidad: created.unidad },
+    })
+    return created
   } catch {
     const nuevo: Medicamento = {
       id: crypto.randomUUID(),
@@ -197,6 +311,13 @@ export async function createMedicamento(input: NuevoMedicamentoInput): Promise<M
       created_at: new Date().toISOString(),
     }
     lsSaveMedicamentos([...lsGetMedicamentos(), nuevo].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: nuevo.id,
+      action: "create",
+      summary: `Medicamento registrado: ${nuevo.nombre}`,
+      meta: { unidad: nuevo.unidad },
+    })
     return nuevo
   }
 }
@@ -240,7 +361,15 @@ export async function createPrescripcion(
       .select("*, medicamento:medicamentos(*)")
       .single()
     if (error) throw error
-    return data as PrescripcionConMedicamento
+    const created = data as PrescripcionConMedicamento
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: created.id,
+      action: "create",
+      summary: `Prescripcion registrada: ${created.medicamento.nombre}`,
+      meta: { paciente_id: created.paciente_id },
+    })
+    return created
   } catch {
     const medicamentos = lsGetMedicamentos()
     const medicamento = medicamentos.find((m) => m.id === input.medicamento_id) ?? {
@@ -262,7 +391,256 @@ export async function createPrescripcion(
       created_at: new Date().toISOString(),
     }
     lsSavePrescripciones([nueva, ...lsGetPrescripciones()])
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: nueva.id,
+      action: "create",
+      summary: `Prescripcion registrada: ${medicamento.nombre}`,
+      meta: { paciente_id: nueva.paciente_id },
+    })
     return { ...nueva, medicamento }
+  }
+}
+
+export async function updatePrescripcion(
+  id: string,
+  input: NuevaPrescripcionInput,
+): Promise<PrescripcionConMedicamento> {
+  try {
+    const { data, error } = await supabase
+      .from("prescripciones")
+      .update(input)
+      .eq("id", id)
+      .select("*, medicamento:medicamentos(*)")
+      .single()
+    if (error) throw error
+    const updated = data as PrescripcionConMedicamento
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Prescripcion actualizada: ${updated.medicamento.nombre}`,
+      meta: { paciente_id: updated.paciente_id },
+    })
+    return updated
+  } catch {
+    const medicamentos = lsGetMedicamentos()
+    const medicamento = medicamentos.find((m) => m.id === input.medicamento_id) ?? {
+      id: input.medicamento_id,
+      nombre: "Desconocido",
+      descripcion: null,
+      unidad: "",
+      created_at: "",
+    }
+    const existing = lsGetPrescripciones().find((p) => p.id === id)
+    const updated: Prescripcion = {
+      id,
+      paciente_id: input.paciente_id,
+      medicamento_id: input.medicamento_id,
+      dosis: input.dosis,
+      frecuencia: input.frecuencia,
+      fecha_inicio: input.fecha_inicio,
+      fecha_fin: input.fecha_fin || null,
+      notas: input.notas || null,
+      created_at: existing?.created_at ?? new Date().toISOString(),
+    }
+    lsSavePrescripciones(
+      lsGetPrescripciones().map((p) => (p.id === id ? updated : p)),
+    )
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Prescripcion actualizada: ${medicamento.nombre}`,
+      meta: { paciente_id: updated.paciente_id },
+    })
+    return { ...updated, medicamento }
+  }
+}
+
+export async function deletePaciente(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from("pacientes").delete().eq("id", id)
+    if (error) throw error
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: id,
+      action: "delete",
+      summary: "Paciente eliminado",
+      meta: null,
+    })
+  } catch {
+    lsSavePacientes(lsGetPacientes().filter((p) => p.id !== id))
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: id,
+      action: "delete",
+      summary: "Paciente eliminado",
+      meta: null,
+    })
+  }
+}
+
+export async function deleteHistoria(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from("historias_clinicas").delete().eq("id", id)
+    if (error) throw error
+    await logActivity({
+      entity_type: "historia",
+      entity_id: id,
+      action: "delete",
+      summary: "Historia clinica eliminada",
+      meta: null,
+    })
+  } catch {
+    lsSaveHistorias(lsGetHistorias().filter((h) => h.id !== id))
+    await logActivity({
+      entity_type: "historia",
+      entity_id: id,
+      action: "delete",
+      summary: "Historia clinica eliminada",
+      meta: null,
+    })
+  }
+}
+
+export async function deletePrescripcion(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from("prescripciones").delete().eq("id", id)
+    if (error) throw error
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: id,
+      action: "delete",
+      summary: "Prescripcion eliminada",
+      meta: null,
+    })
+  } catch {
+    lsSavePrescripciones(lsGetPrescripciones().filter((p) => p.id !== id))
+    await logActivity({
+      entity_type: "prescripcion",
+      entity_id: id,
+      action: "delete",
+      summary: "Prescripcion eliminada",
+      meta: null,
+    })
+  }
+}
+
+export async function deleteMedicamento(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from("medicamentos").delete().eq("id", id)
+    if (error) throw error
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: id,
+      action: "delete",
+      summary: "Medicamento eliminado",
+      meta: null,
+    })
+  } catch {
+    lsSaveMedicamentos(lsGetMedicamentos().filter((m) => m.id !== id))
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: id,
+      action: "delete",
+      summary: "Medicamento eliminado",
+      meta: null,
+    })
+  }
+}
+
+export async function updatePaciente(
+  id: string,
+  input: NuevoPacienteInput,
+): Promise<Paciente> {
+  try {
+    const { data, error } = await supabase
+      .from("pacientes")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single()
+    if (error) throw error
+    const updated = data as Paciente
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Paciente actualizado: ${updated.nombre}`,
+      meta: { cedula: updated.cedula },
+    })
+    return updated
+  } catch {
+    const updated = { id, ...input, created_at: new Date().toISOString() }
+    lsSavePacientes(lsGetPacientes().map((p) => (p.id === id ? updated : p)))
+    await logActivity({
+      entity_type: "paciente",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Paciente actualizado: ${updated.nombre}`,
+      meta: { cedula: updated.cedula },
+    })
+    return updated
+  }
+}
+
+export async function updateMedicamento(
+  id: string,
+  input: NuevoMedicamentoInput,
+): Promise<Medicamento> {
+  try {
+    const { data, error } = await supabase
+      .from("medicamentos")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single()
+    if (error) throw error
+    const updated = data as Medicamento
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Medicamento actualizado: ${updated.nombre}`,
+      meta: { unidad: updated.unidad },
+    })
+    return updated
+  } catch {
+    const updated: Medicamento = {
+      id,
+      nombre: input.nombre,
+      descripcion: input.descripcion || null,
+      unidad: input.unidad,
+      created_at: new Date().toISOString(),
+    }
+    lsSaveMedicamentos(
+      lsGetMedicamentos()
+        .map((m) => (m.id === id ? updated : m))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    )
+    await logActivity({
+      entity_type: "medicamento",
+      entity_id: updated.id,
+      action: "update",
+      summary: `Medicamento actualizado: ${updated.nombre}`,
+      meta: { unidad: updated.unidad },
+    })
+    return updated
+  }
+}
+
+export async function getActivityLogs(limit = 50): Promise<ActivityLog[]> {
+  try {
+    const { data, error } = await supabase
+      .from("activity_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit)
+    if (error) throw error
+    return (data ?? []) as ActivityLog[]
+  } catch {
+    return lsGetActivity().slice(0, limit)
   }
 }
 

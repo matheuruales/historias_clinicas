@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Eye, Users } from "lucide-react"
+import { Eye, Trash2, Users } from "lucide-react"
 import { Button } from "@/ui/button"
 import { Badge } from "@/ui/badge"
 import {
@@ -12,14 +12,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table"
-import type { PacienteConConteo } from "@/lib/types"
+import type { NuevoPacienteInput, PacienteConConteo } from "@/lib/types"
+import { EditarPacienteDialog } from "@/components/dashboard/editar-paciente-dialog"
+import { ConfirmDeleteDialog } from "@/components/dashboard/confirm-delete-dialog"
 
 interface PacientesTableProps {
   pacientes: PacienteConConteo[]
   loading: boolean
+  onUpdated: (id: string, input: NuevoPacienteInput) => Promise<void>
+  onDeleted: (id: string) => Promise<void>
 }
 
-export function PacientesTable({ pacientes, loading }: PacientesTableProps) {
+export function PacientesTable({ pacientes, loading, onUpdated, onDeleted }: PacientesTableProps) {
   const router = useRouter()
 
   if (loading) {
@@ -67,14 +71,30 @@ export function PacientesTable({ pacientes, loading }: PacientesTableProps) {
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/dashboard/pacientes/${paciente.id}`)}
-                >
-                  <Eye className="mr-1 h-3 w-3" />
-                  Ver Historias
-                </Button>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/dashboard/pacientes/${paciente.id}`)}
+                  >
+                    <Eye className="mr-1 h-3 w-3" />
+                    Ver Historias
+                  </Button>
+                  <EditarPacienteDialog
+                    paciente={paciente}
+                    onUpdated={onUpdated}
+                  />
+                  <ConfirmDeleteDialog
+                    title="Eliminar paciente"
+                    description="Esta accion eliminara el paciente y sus historias clinicas."
+                    onConfirm={() => onDeleted(paciente.id)}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    }
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ))}

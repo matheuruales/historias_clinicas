@@ -1,5 +1,6 @@
-import { FileText } from "lucide-react"
+import { FileText, Trash2 } from "lucide-react"
 import { Badge } from "@/ui/badge"
+import { Button } from "@/ui/button"
 import {
   Table,
   TableBody,
@@ -8,11 +9,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table"
-import type { HistoriaClinica } from "@/lib/types"
+import type { HistoriaClinica, NuevaHistoriaInput } from "@/lib/types"
+import { EditarHistoriaDialog } from "@/components/dashboard/editar-historia-dialog"
+import { ConfirmDeleteDialog } from "@/components/dashboard/confirm-delete-dialog"
 
 interface HistoriasTableProps {
   historias: HistoriaClinica[]
   loading: boolean
+  onUpdated: (id: string, input: NuevaHistoriaInput) => Promise<void>
+  onDeleted: (id: string) => Promise<void>
 }
 
 function formatDate(fecha: string) {
@@ -23,7 +28,7 @@ function formatDate(fecha: string) {
   })
 }
 
-export function HistoriasTable({ historias, loading }: HistoriasTableProps) {
+export function HistoriasTable({ historias, loading, onUpdated, onDeleted }: HistoriasTableProps) {
   if (loading) {
     return (
       <div className="space-y-2">
@@ -51,6 +56,7 @@ export function HistoriasTable({ historias, loading }: HistoriasTableProps) {
           <TableRow>
             <TableHead>Fecha</TableHead>
             <TableHead>Diagnóstico</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
             <TableHead>Síntomas</TableHead>
             <TableHead>Tratamiento</TableHead>
           </TableRow>
@@ -69,6 +75,21 @@ export function HistoriasTable({ historias, loading }: HistoriasTableProps) {
               </TableCell>
               <TableCell className="max-w-xs">
                 <p className="line-clamp-2 text-sm text-muted-foreground">{historia.tratamiento}</p>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <EditarHistoriaDialog historia={historia} onUpdated={onUpdated} />
+                  <ConfirmDeleteDialog
+                    title="Eliminar historia clinica"
+                    description="Esta accion eliminara el registro clinico del paciente."
+                    onConfirm={() => onDeleted(historia.id)}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    }
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ))}

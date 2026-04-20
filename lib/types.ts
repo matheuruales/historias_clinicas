@@ -34,6 +34,16 @@ export interface NuevaHistoriaInput {
   fecha: string
 }
 
+export interface ActivityLog {
+  id: string
+  entity_type: string
+  entity_id: string | null
+  action: string
+  summary: string
+  meta: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface Medicamento {
   id: string
   nombre: string

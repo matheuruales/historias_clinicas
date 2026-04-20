@@ -1,5 +1,6 @@
-import { Pill } from "lucide-react"
+import { Pill, Trash2 } from "lucide-react"
 import { Badge } from "@/ui/badge"
+import { Button } from "@/ui/button"
 import {
   Table,
   TableBody,
@@ -8,11 +9,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table"
-import type { PrescripcionConMedicamento } from "@/lib/types"
+import type { Medicamento, NuevaPrescripcionInput, PrescripcionConMedicamento } from "@/lib/types"
+import { EditarPrescripcionDialog } from "@/components/dashboard/editar-prescripcion-dialog"
+import { ConfirmDeleteDialog } from "@/components/dashboard/confirm-delete-dialog"
 
 interface PrescripcionesTableProps {
   prescripciones: PrescripcionConMedicamento[]
   loading: boolean
+  medicamentos: Medicamento[]
+  onUpdated: (id: string, input: NuevaPrescripcionInput) => Promise<void>
+  onDeleted: (id: string) => Promise<void>
 }
 
 function formatDate(fecha: string) {
@@ -28,7 +34,7 @@ function isActiva(fechaFin: string | null): boolean {
   return new Date(fechaFin + "T00:00:00") >= new Date()
 }
 
-export function PrescripcionesTable({ prescripciones, loading }: PrescripcionesTableProps) {
+export function PrescripcionesTable({ prescripciones, loading, medicamentos, onUpdated, onDeleted }: PrescripcionesTableProps) {
   if (loading) {
     return (
       <div className="space-y-2">
@@ -61,6 +67,7 @@ export function PrescripcionesTable({ prescripciones, loading }: PrescripcionesT
             <TableHead>Fin</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Notas</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -87,6 +94,21 @@ export function PrescripcionesTable({ prescripciones, loading }: PrescripcionesT
                 </TableCell>
                 <TableCell className="max-w-xs">
                   <p className="line-clamp-2 text-sm text-muted-foreground">{p.notas ?? "—"}</p>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <EditarPrescripcionDialog prescripcion={p} medicamentos={medicamentos} onUpdated={onUpdated} />
+                    <ConfirmDeleteDialog
+                      title="Eliminar prescripcion"
+                      description="Esta accion eliminara la prescripcion del paciente."
+                      onConfirm={() => onDeleted(p.id)}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      }
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             )

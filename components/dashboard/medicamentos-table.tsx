@@ -1,5 +1,6 @@
-import { Pill } from "lucide-react"
+import { Pill, Trash2 } from "lucide-react"
 import { Badge } from "@/ui/badge"
+import { Button } from "@/ui/button"
 import {
   Table,
   TableBody,
@@ -8,14 +9,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table"
-import type { Medicamento } from "@/lib/types"
+import type { Medicamento, NuevoMedicamentoInput } from "@/lib/types"
+import { EditarMedicamentoDialog } from "@/components/dashboard/editar-medicamento-dialog"
+import { ConfirmDeleteDialog } from "@/components/dashboard/confirm-delete-dialog"
 
 interface MedicamentosTableProps {
   medicamentos: Medicamento[]
   loading: boolean
+  onUpdated: (id: string, input: NuevoMedicamentoInput) => Promise<void>
+  onDeleted: (id: string) => Promise<void>
 }
 
-export function MedicamentosTable({ medicamentos, loading }: MedicamentosTableProps) {
+export function MedicamentosTable({ medicamentos, loading, onUpdated, onDeleted }: MedicamentosTableProps) {
   if (loading) {
     return (
       <div className="space-y-2">
@@ -42,6 +47,7 @@ export function MedicamentosTable({ medicamentos, loading }: MedicamentosTablePr
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
             <TableHead>Descripción</TableHead>
             <TableHead>Unidad</TableHead>
           </TableRow>
@@ -55,6 +61,21 @@ export function MedicamentosTable({ medicamentos, loading }: MedicamentosTablePr
               </TableCell>
               <TableCell>
                 <Badge variant="outline">{med.unidad}</Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <EditarMedicamentoDialog medicamento={med} onUpdated={onUpdated} />
+                  <ConfirmDeleteDialog
+                    title="Eliminar medicamento"
+                    description="Esta accion eliminara el medicamento del catalogo."
+                    onConfirm={() => onDeleted(med.id)}
+                    trigger={
+                      <Button variant="ghost" size="sm">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    }
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ))}
