@@ -302,5 +302,13 @@ export function useActivityFeed(limit = 30) {
     fetchData()
   }, [fetchData])
 
+  useEffect(() => {
+    function handleRefresh() {
+      fetchData()
+    }
+    window.addEventListener("activity-log-updated", handleRefresh)
+    return () => window.removeEventListener("activity-log-updated", handleRefresh)
+  }, [fetchData])
+
   return { activity, loading, error, refresh: fetchData }
 }

@@ -77,6 +77,9 @@ async function logActivity(entry: Omit<ActivityLog, "id" | "created_at">) {
       .select()
       .single()
     if (error) throw error
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("activity-log-updated"))
+    }
     return data as ActivityLog
   } catch {
     const localEntry: ActivityLog = {
@@ -85,6 +88,9 @@ async function logActivity(entry: Omit<ActivityLog, "id" | "created_at">) {
       ...entry,
     }
     lsSaveActivity([localEntry, ...lsGetActivity()])
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("activity-log-updated"))
+    }
     return localEntry
   }
 }

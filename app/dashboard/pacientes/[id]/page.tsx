@@ -156,7 +156,14 @@ export default function PacienteDetailPage({ params }: PageProps) {
             >
               Exportar PDF
             </Button>
-            {paciente && <NuevaHistoriaDialog pacienteId={id} onCreated={addHistoria} />}
+            {paciente && (
+              <NuevaHistoriaDialog
+                pacienteId={id}
+                onCreated={addHistoria}
+                medicamentos={medicamentos}
+                onPrescripcionCreated={addPrescripcion}
+              />
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
